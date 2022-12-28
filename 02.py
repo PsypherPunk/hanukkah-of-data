@@ -1,36 +1,41 @@
 #!/usr/bin/env python3
 
-import csv
+import polars
 
-with open("noahs-products.csv") as i:
-    products = list(csv.DictReader(i))
+products = polars.scan_csv("noahs-products.csv")
+items = polars.scan_csv("noahs-orders_items.csv")
+orders = polars.scan_csv("noahs-orders.csv")
+customers = polars.scan_csv("noahs-customers.csv")
 
-with open("noahs-orders_items.csv") as i:
-    items = {}
-    for item in csv.DictReader(i):
-        items.setdefault(item["sku"], []).append(item)
 
-with open("noahs-orders.csv") as i:
-    orders = {order["orderid"]: order for order in csv.DictReader(i)}
-
-with open("noahs-customers.csv") as i:
-    customers = {customer["customerid"]: customer for customer in csv.DictReader(i)}
-
-bagels_cleaner = [product for product in products if product["desc"] == "Coffee, Drip"]
-items = [item for bagel in bagels_cleaner for item in items[bagel["sku"]]]
-orders = [orders[item["orderid"]] for item in items]
-customers = [
-    customers[order["customerid"]]
-    for order in orders
-    if order["ordered"].startswith("2017")
-]
-
-customer = next(
-    customer
-    for customer in customers
-    if customer["name"].startswith("J") and customer["name"].split()[-1].startswith("D")
+(phone,) = (
+    items.join(
+        products,
+        on="sku",
+        how="inner",
+    )
+    .join(
+        orders,
+        on="orderid",
+        how="inner",
+    )
+    .join(
+        customers,
+        on="customerid",
+        how="inner",
+    )
+    .filter(polars.col("desc") == "Coffee, Drip")
+    .filter(polars.col("ordered").str.starts_with("2017"))
+    .filter(polars.col("name").str.to_lowercase().str.starts_with("j"))
+    .filter(
+        polars.col("name")
+        .str.split(" ")
+        .arr.last()
+        .str.to_lowercase()
+        .str.starts_with("d")
+    )
+    .select("phone")
+    .collect()["phone"]
 )
 
-print(
-    f"…but is there any chance you could find their phone number? {customer['phone']}"
-)
+print(f"…but is there any chance you could find their phone number? {phone}")
