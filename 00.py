@@ -11,7 +11,7 @@ if not path.exists():
     request = urllib.request.Request("https://hanukkah.bluebird.sh/5783/noahs-csv.zip")
     request.add_header(
         "User-Agent",
-        "hanukkah-of-data",
+        "https://github.com/PsypherPunk/hanukkah-of-data",
     )
     with urllib.request.urlopen(request) as r:
         body = r.read()
